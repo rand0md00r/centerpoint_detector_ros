@@ -1,0 +1,7 @@
+<!-- FILEPATH: /home/CenterPoint/catkin_points_workspack/src/pcl_subscriber/launch/run.launch -->
+
+<launch>
+    <!-- Run the centerpoint -->
+    <node name="pcl_subscriber_node" pkg="pcl_subscriber" type="pcl_subscriber_node" output="screen"/>
+
+</launch>
