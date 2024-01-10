@@ -14,8 +14,6 @@ pointCloudCallbackClass::pointCloudCallbackClass(trtParams& params) :
     params.setParams();
     centerpoint.init(params);
 
-    ROS_INFO("Building and running a GPU inference engine for CenterPoint");
-
     if(!centerpoint.engineInitlization()) 
     {
         ROS_ERROR("centerpoint build failed");
@@ -25,7 +23,6 @@ pointCloudCallbackClass::pointCloudCallbackClass(trtParams& params) :
         ROS_INFO("Centerpoint build successed");
     }
 
-    ROS_INFO("Waiting for point cloud . . .");
 }
 
 
@@ -71,6 +68,30 @@ void pointCloudCallbackClass::publishBoxes(const std::vector<Box>& predResult)
 }
 
 
+void pointCloudCallbackClass::paramServerInit(ros::NodeHandle& nh)
+{
+    nh.param<float>("max_x_range", max_x_range, 20.0);
+    nh.param<float>("min_x_range", min_x_range, -20.0);
+    nh.param<float>("max_y_range", max_y_range, 20.0);
+    nh.param<float>("min_y_range", min_y_range, -20.0);
+    nh.param<float>("max_z_range", max_z_range, 1.0);
+    nh.param<float>("min_z_range", min_z_range, -0.7);
+    nh.param<float>("ransac_distance_threshold", ransac_distance_threshold, 0.1);
+    nh.param<float>("ransac_max_iterations", ransac_max_iterations, 500);
+
+    ROS_INFO("max_x_range: %f", max_x_range);
+    ROS_INFO("min_x_range: %f", min_x_range);
+    ROS_INFO("max_y_range: %f", max_y_range);
+    ROS_INFO("min_y_range: %f", min_y_range);
+    ROS_INFO("max_z_range: %f", max_z_range);
+    ROS_INFO("min_z_range: %f", min_z_range);
+    ROS_INFO("ransac_distance_threshold: %f", ransac_distance_threshold);
+    ROS_INFO("ransac_max_iterations: %f", ransac_max_iterations);
+
+    ROS_INFO("Waiting for point cloud . . .");
+}
+
+
 void pointCloudCallbackClass::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &input)
 {
     // ====================点云滤波====================
@@ -80,25 +101,25 @@ void pointCloudCallbackClass::pointCloudCallback(const sensor_msgs::PointCloud2C
     // range filter
     range_filter.setInputCloud(input_cloud);
     range_filter.setFilterFieldName("x");
-    range_filter.setFilterLimits(-10.0, 10.0);
+    range_filter.setFilterLimits(min_x_range, max_x_range);
     range_filter.filter(*range_filtered_cloud);
 
     range_filter.setInputCloud(range_filtered_cloud);
     range_filter.setFilterFieldName("y");
-    range_filter.setFilterLimits(-10.0, 10.0);
+    range_filter.setFilterLimits(min_y_range, max_y_range);
     range_filter.filter(*range_filtered_cloud);
 
     range_filter.setInputCloud(range_filtered_cloud);
     range_filter.setFilterFieldName("z");
-    range_filter.setFilterLimits(-0.7, 1.0);
+    range_filter.setFilterLimits(min_z_range, max_z_range);
     range_filter.filter(*range_filtered_cloud);
 
     // removal ground point
     seg.setOptimizeCoefficients(true);
     seg.setModelType(pcl::SACMODEL_PLANE);
     seg.setMethodType(pcl::SAC_RANSAC);
-    seg.setMaxIterations(500);
-    seg.setDistanceThreshold(0.1);
+    seg.setMaxIterations(ransac_max_iterations);
+    seg.setDistanceThreshold(ransac_distance_threshold);
 
     seg.setInputCloud(range_filtered_cloud);
     seg.segment(*inliers, *coefficients);
@@ -153,6 +174,9 @@ int main(int argc, char** argv)
 
     // 将centerpoint传入pointCloudCallbackClass类中, 以便在pointCloudCallback中使用
     pointCloudCallbackClass pointCloudCallback(params);
+
+    // 从param server中读取参数
+    pointCloudCallback.paramServerInit(nh);
     
     // Subscriber and Publisher
     cloud_sub   = nh.subscribe<sensor_msgs::PointCloud2> ("/os_cloud_node/points", 1, &pointCloudCallbackClass::pointCloudCallback, &pointCloudCallback);

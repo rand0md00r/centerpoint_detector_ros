@@ -16,6 +16,7 @@ class pointCloudCallbackClass
         pointCloudCallbackClass(trtParams& params);
         void publishBoxes(const std::vector<Box>& predResult);
         void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& input);
+        void paramServerInit(ros::NodeHandle& nh);
 
     private:
         pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud;
@@ -32,6 +33,17 @@ class pointCloudCallbackClass
         sensor_msgs::PointCloud2 non_ground_cloud_msg;
 
         trtCenterPoint centerpoint;
+
+        // ParamServer params;
+        ros::NodeHandle private_nh;
+        float max_x_range;
+        float max_y_range;
+        float min_x_range;
+        float min_y_range;
+        float max_z_range;
+        float min_z_range;
+        float ransac_distance_threshold;
+        float ransac_max_iterations;
 };
 
 #endif
