@@ -25,6 +25,30 @@ pointCloudCallbackClass::pointCloudCallbackClass(trtParams& params) :
 
 }
 
+void pointCloudCallbackClass::publishRange()
+{
+    // 发布一个长为max_x_range - min_x_range, 宽为max_y_range - min_y_range, 高为max_z_range - min_z_range的空心立方体, 表示点云的范围
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "os_sensor"; // 修改为你的坐标系
+    marker.header.stamp = ros::Time::now();
+    marker.ns = "range";
+    marker.id = 0;
+    marker.type = visualization_msgs::Marker::CUBE;
+    marker.action = visualization_msgs::Marker::ADD;
+
+    marker.pose.position.x = max_x_range - (max_x_range - min_x_range) / 2;
+    marker.pose.position.y = max_y_range - (max_y_range - min_y_range) / 2;
+    marker.pose.position.z = max_z_range - (max_z_range - min_z_range) / 2;
+    marker.scale.x = max_x_range - min_x_range;
+    marker.scale.y = max_y_range - min_y_range;
+    marker.scale.z = max_z_range - min_z_range;
+    marker.color.r = 0.0;
+    marker.color.g = 0.5;
+    marker.color.b = 0.0;
+    marker.color.a = 0.2;
+    
+    range_pub.publish(marker);
+}
 
 void pointCloudCallbackClass::publishBoxes(const std::vector<Box>& predResult) 
 {
@@ -157,6 +181,7 @@ void pointCloudCallbackClass::pointCloudCallback(const sensor_msgs::PointCloud2C
     // ====================publish boxes====================
     if(centerpoint.predResult.size() == 0) ROS_WARN("no boxes detected! ");
     publishBoxes(centerpoint.predResult);
+    publishRange();
 }
 
 
@@ -182,6 +207,7 @@ int main(int argc, char** argv)
     cloud_sub   = nh.subscribe<sensor_msgs::PointCloud2> ("/os_cloud_node/points", 1, &pointCloudCallbackClass::pointCloudCallback, &pointCloudCallback);
     non_grd_pub = nh.advertise<sensor_msgs::PointCloud2> ("/non_ground_points", 1);
     marker_pub  = nh.advertise<visualization_msgs::MarkerArray> ("/centerpoint/dets", 1);
+    range_pub   = nh.advertise<visualization_msgs::Marker> ("/filtered_points_range", 1);
 
     // Start a spinner with 4 threads
     ros::AsyncSpinner spinner(4);

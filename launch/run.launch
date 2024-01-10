@@ -2,7 +2,7 @@
 
 <launch>
     <!-- Run the centerpoint -->
-    <!-- <rosparam command="load" file="$(find pcl_subscriber)/config/params.yaml"/> -->
+    <rosparam command="load" file="$(find pcl_subscriber)/config/params.yaml"/>
     <node name="pcl_subscriber_node" pkg="pcl_subscriber" type="pcl_subscriber_node" output="screen"/>
 
 </launch>

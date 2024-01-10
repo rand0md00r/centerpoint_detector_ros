@@ -7,6 +7,7 @@
 ros::Subscriber cloud_sub;
 ros::Publisher non_grd_pub;
 ros::Publisher marker_pub;
+ros::Publisher range_pub;
 
 
 
@@ -15,6 +16,7 @@ class pointCloudCallbackClass
     public:
         pointCloudCallbackClass(trtParams& params);
         void publishBoxes(const std::vector<Box>& predResult);
+        void publishRange();
         void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& input);
         void paramServerInit(ros::NodeHandle& nh);
 
