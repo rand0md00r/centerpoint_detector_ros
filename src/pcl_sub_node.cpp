@@ -39,6 +39,10 @@ void pointCloudCallbackClass::publishRange()
     marker.pose.position.x = max_x_range - (max_x_range - min_x_range) / 2;
     marker.pose.position.y = max_y_range - (max_y_range - min_y_range) / 2;
     marker.pose.position.z = max_z_range - (max_z_range - min_z_range) / 2;
+    marker.pose.orientation.w = 1.0;
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
     marker.scale.x = max_x_range - min_x_range;
     marker.scale.y = max_y_range - min_y_range;
     marker.scale.z = max_z_range - min_z_range;
