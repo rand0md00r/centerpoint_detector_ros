@@ -48,4 +48,4 @@ roslaunch pcl_subscriber run.launch
 
 ## 致谢
 
-本项目的部分代码参考了https://github.com/HaohaoNJU/CenterPoint/tree/master项目。我们对原作者的贡献表示感谢。
+本项目的部分代码参考了[Centerpoint](https://github.com/HaohaoNJU/CenterPoint/tree/master)项目。我们对原作者的贡献表示感谢。
