@@ -78,6 +78,7 @@ void trtCenterPoint::init(const trtParams params)
 
 std::shared_ptr<nvinfer1::ICudaEngine> trtCenterPoint::buildFromSerializedEngine(std::string serializedEngineFile)
 {
+    cout << "serializedEngineFile : " << serializedEngineFile << endl;
     std::vector<char> trtModelStream_;
     size_t size{0};
     std::ifstream file(serializedEngineFile, std::ios::binary);

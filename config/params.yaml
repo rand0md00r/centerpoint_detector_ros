@@ -1,8 +1,8 @@
-max_x_range:  20.0
-min_x_range: -20.0
-max_y_range:  13.0
-min_y_range: -13.0
-max_z_range:  1.0
+max_x_range:  6.0  # train_2:12.5 train_1:15.5
+min_x_range: -6.0  # train_2:-16.5 
+max_y_range:  3.0   # train_2:7.0 train_1:13.5
+min_y_range: -3.0   # train_2:-7.0 train_1:-14.0
+max_z_range:  1.5
 min_z_range: -0.7
 ransac_distance_threshold: 0.1
 ransac_max_iterations: 500

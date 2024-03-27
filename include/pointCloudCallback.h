@@ -2,6 +2,7 @@
 #define POINTCLOUDCALLBACK_H
 
 #include "trtCenterPoint.h"
+#include <tf/transform_listener.h>
 
 // Global variables
 ros::Subscriber cloud_sub;
@@ -19,6 +20,7 @@ class pointCloudCallbackClass
         void publishRange();
         void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& input);
         void paramServerInit(ros::NodeHandle& nh);
+        void timerCallback(const ros::TimerEvent& event);
 
     private:
         pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud;
@@ -38,14 +40,21 @@ class pointCloudCallbackClass
 
         // ParamServer params;
         ros::NodeHandle private_nh;
-        float max_x_range;
-        float max_y_range;
-        float min_x_range;
-        float min_y_range;
-        float max_z_range;
-        float min_z_range;
-        float ransac_distance_threshold;
-        float ransac_max_iterations;
+        double max_x_range;
+        double max_y_range;
+        double min_x_range;
+        double min_y_range;
+        double max_z_range;
+        double min_z_range;
+        double ransac_distance_threshold;
+        double ransac_max_iterations;
+
+        // 用定时器设定频率
+        ros::Timer timer;
+
+        // 坐标变换
+        tf::TransformListener tf_listener;
+        bool has_camera_init;
 };
 
 #endif

@@ -23,33 +23,35 @@ pointCloudCallbackClass::pointCloudCallbackClass(trtParams& params) :
         ROS_INFO("Centerpoint build successed");
     }
 
+    has_camera_init = true;
 }
 
 void pointCloudCallbackClass::publishRange()
 {
     // 发布一个长为max_x_range - min_x_range, 宽为max_y_range - min_y_range, 高为max_z_range - min_z_range的空心立方体, 表示点云的范围
     visualization_msgs::Marker marker;
-    marker.header.frame_id = "os_sensor"; // 修改为你的坐标系
     marker.header.stamp = ros::Time::now();
     marker.ns = "range";
     marker.id = 0;
     marker.type = visualization_msgs::Marker::CUBE;
     marker.action = visualization_msgs::Marker::ADD;
 
+    marker.header.frame_id = "os_sensor";
     marker.pose.position.x = max_x_range - (max_x_range - min_x_range) / 2;
     marker.pose.position.y = max_y_range - (max_y_range - min_y_range) / 2;
-    marker.pose.position.z = max_z_range - (max_z_range - min_z_range) / 2;
+    // marker.pose.position.z = max_z_range - (max_z_range - min_z_range) / 2;
+    marker.pose.position.z = min_z_range - 0.1;
     marker.pose.orientation.w = 1.0;
     marker.pose.orientation.x = 0.0;
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
     marker.scale.x = max_x_range - min_x_range;
     marker.scale.y = max_y_range - min_y_range;
-    marker.scale.z = max_z_range - min_z_range;
-    marker.color.r = 0.0;
-    marker.color.g = 0.5;
-    marker.color.b = 0.0;
-    marker.color.a = 0.2;
+    marker.scale.z = 0.1;
+    marker.color.r = 1.0;
+    marker.color.g = 1.0;
+    marker.color.b = 1.0;
+    marker.color.a = 0.3;
     
     range_pub.publish(marker);
 }
@@ -57,20 +59,47 @@ void pointCloudCallbackClass::publishRange()
 void pointCloudCallbackClass::publishBoxes(const std::vector<Box>& predResult) 
 {
     visualization_msgs::MarkerArray markerArray;
+    tf::Stamped<tf::Pose> pose_in_os_sensor;
+    tf::Stamped<tf::Pose> pose_in_camera_init;
 
     for (size_t i = 0; i < predResult.size(); ++i) 
     {
         visualization_msgs::Marker marker;
-        marker.header.frame_id = "os_sensor"; // 修改为你的坐标系
         marker.header.stamp = ros::Time::now();
         marker.ns = "boxes";
         marker.id = i;
         marker.type = visualization_msgs::Marker::CUBE;
         marker.action = visualization_msgs::Marker::ADD;
 
-        marker.pose.position.x = predResult[i].x;
-        marker.pose.position.y = predResult[i].y;
-        marker.pose.position.z = predResult[i].z;
+        pose_in_os_sensor.frame_id_ = "os_sensor";
+        pose_in_os_sensor.setOrigin(tf::Vector3(predResult[i].x, predResult[i].y, predResult[i].z));
+
+        if (has_camera_init) {
+            try{
+                tf_listener.transformPose("camera_init", pose_in_os_sensor, pose_in_camera_init);
+            }
+            catch (tf::TransformException& ex){
+                ROS_ERROR("Transform exception: %s", ex.what());
+            }
+            
+            marker.header.frame_id = "camera_init";
+            marker.pose.position.x = pose_in_camera_init.getOrigin().x();
+            marker.pose.position.y = pose_in_camera_init.getOrigin().y();
+            marker.pose.position.z = pose_in_camera_init.getOrigin().z();
+            marker.pose.orientation.w = 1.0;
+            marker.pose.orientation.x = 0.0;
+            marker.pose.orientation.y = 0.0;
+            marker.pose.orientation.z = 0.0;
+        } else {
+            marker.header.frame_id = "os_sensor";
+            marker.pose.position.x = predResult[i].x;
+            marker.pose.position.y = predResult[i].y;
+            marker.pose.position.z = predResult[i].z;
+            marker.pose.orientation.w = cos(predResult[i].theta / 2.0); // cos(theta/2
+            marker.pose.orientation.x = 0.0;
+            marker.pose.orientation.y = 0.0;
+            marker.pose.orientation.z = sin(predResult[i].theta / 2.0); // sin(theta/2)
+        }
 
         marker.scale.x = predResult[i].l;
         marker.scale.y = predResult[i].h;
@@ -80,13 +109,13 @@ void pointCloudCallbackClass::publishBoxes(const std::vector<Box>& predResult)
         marker.color.g = predResult[i].cls;
         marker.color.b = predResult[i].score;
         marker.color.a = 0.5;
-        // marker.text = predResult[i].cls;
 
-        marker.pose.orientation.z = predResult[i].theta;    //
+        marker.lifetime = ros::Duration(0.45);
 
-        marker.lifetime = ros::Duration(0.2);
+        bool isInMinRange = predResult[i].x < 0.5 && predResult[i].y < 0.5;     // 0.5m以内的障碍物不显示
+        bool isFitSize = predResult[i].w < 2.0 && predResult[i].l < 2.0 && predResult[i].h < 2.0; // 尺寸过大的障碍物不显示
 
-        if(!predResult[i].isDrop && predResult[i].score > 0.1 && predResult[i].w < 2.0 && predResult[i].l < 2.0 && predResult[i].h < 2.0)
+        if(!predResult[i].isDrop && predResult[i].score > 0.1 && !isInMinRange && isFitSize)
         {
             markerArray.markers.push_back(marker);
         }
@@ -98,14 +127,14 @@ void pointCloudCallbackClass::publishBoxes(const std::vector<Box>& predResult)
 
 void pointCloudCallbackClass::paramServerInit(ros::NodeHandle& nh)
 {
-    nh.param<float>("max_x_range", max_x_range, 20.0);
-    nh.param<float>("min_x_range", min_x_range, -20.0);
-    nh.param<float>("max_y_range", max_y_range, 20.0);
-    nh.param<float>("min_y_range", min_y_range, -20.0);
-    nh.param<float>("max_z_range", max_z_range, 1.0);
-    nh.param<float>("min_z_range", min_z_range, -0.7);
-    nh.param<float>("ransac_distance_threshold", ransac_distance_threshold, 0.1);
-    nh.param<float>("ransac_max_iterations", ransac_max_iterations, 500);
+    nh.param<double>("max_x_range", max_x_range, 20.0);
+    nh.param<double>("min_x_range", min_x_range, -20.0);
+    nh.param<double>("max_y_range", max_y_range, 20.0);
+    nh.param<double>("min_y_range", min_y_range, -20.0);
+    nh.param<double>("max_z_range", max_z_range, 1.0);
+    nh.param<double>("min_z_range", min_z_range, -0.7);
+    nh.param<double>("ransac_distance_threshold", ransac_distance_threshold, 0.1);
+    nh.param<double>("ransac_max_iterations", ransac_max_iterations, 500);
 
     ROS_INFO("max_x_range: %f", max_x_range);
     ROS_INFO("min_x_range: %f", min_x_range);
@@ -123,7 +152,7 @@ void pointCloudCallbackClass::paramServerInit(ros::NodeHandle& nh)
 void pointCloudCallbackClass::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &input)
 {
     // ====================点云滤波====================
-    auto start = std::chrono::system_clock::now();
+    // auto start = std::chrono::system_clock::now();
     pcl::fromROSMsg (*input, *input_cloud);
 
     // range filter
@@ -165,23 +194,31 @@ void pointCloudCallbackClass::pointCloudCallback(const sensor_msgs::PointCloud2C
     // assign global cloud
     centerpoint.global_cloud = non_ground_cloud;
 
+}
+
+void pointCloudCallbackClass::timerCallback(const ros::TimerEvent& event)
+{
     // ====================publish non ground====================
-    pcl::toROSMsg(*non_ground_cloud, non_ground_cloud_msg);
+    pcl::toROSMsg(*centerpoint.global_cloud, non_ground_cloud_msg);
     non_grd_pub.publish(non_ground_cloud_msg);
 
     auto after_filter = std::chrono::system_clock::now();
-    std::chrono::duration<double> filter_time = after_filter - start;
-    ROS_DEBUG("filter time: %f", filter_time.count());
+    // std::chrono::duration<double> filter_time = after_filter - start;
+    // ROS_DEBUG("filter time: %f", filter_time.count());
     
+
+
     // ====================centerpoint infer====================
     if (!centerpoint.infer()) ROS_ERROR("infer failed! ");
 
     auto after_infer = std::chrono::system_clock::now();
     std::chrono::duration<double> infer_time = after_infer - after_filter;
-    std::chrono::duration<double> all_time = after_infer - start;
+    // std::chrono::duration<double> all_time = after_infer - start;
     ROS_DEBUG("infer time: %f", infer_time.count());
-    ROS_DEBUG("all time of a frame: %f", all_time.count());
+    // ROS_DEBUG("all time of a frame: %f", all_time.count());
 
+    
+    
     // ====================publish boxes====================
     if(centerpoint.predResult.size() == 0) ROS_WARN("no boxes detected! ");
     publishBoxes(centerpoint.predResult);
@@ -193,7 +230,8 @@ int main(int argc, char** argv)
 {
     ros::init (argc, argv, "my_pcl_subscriber");
 
-    // Set the logger level
+    // Set the logger level and time stamp
+    auto start = std::chrono::system_clock::now();
     if(ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info)) {ros::console::notifyLoggerLevelsChanged();}
 
     ros::NodeHandle nh;
@@ -209,9 +247,12 @@ int main(int argc, char** argv)
     
     // Subscriber and Publisher
     cloud_sub   = nh.subscribe<sensor_msgs::PointCloud2> ("/os_cloud_node/points", 1, &pointCloudCallbackClass::pointCloudCallback, &pointCloudCallback);
+    
     non_grd_pub = nh.advertise<sensor_msgs::PointCloud2> ("/non_ground_points", 1);
     marker_pub  = nh.advertise<visualization_msgs::MarkerArray> ("/centerpoint/dets", 1);
     range_pub   = nh.advertise<visualization_msgs::Marker> ("/filtered_points_range", 1);
+    // 创建一个定时器，每隔1秒触发一次回调函数
+    ros::Timer timer = nh.createTimer(ros::Duration(0.2), &pointCloudCallbackClass::timerCallback, &pointCloudCallback);
 
     // Start a spinner with 4 threads
     ros::AsyncSpinner spinner(4);

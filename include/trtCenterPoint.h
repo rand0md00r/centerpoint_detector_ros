@@ -28,17 +28,15 @@ struct trtParams: public Params{
         // initialize sample parameters 
         if(PACKAGE_PATH.empty()) {
             ROS_ERROR("PACKAGE_PATH is empty ! use direct path !");
-            // this->pfeSerializedEnginePath = "/home/CenterPoint/catkin_points_workspack/src/pcl_subscriber/models/pfe_fp.engine";
-            // this->rpnSerializedEnginePath = "/home/CenterPoint/catkin_points_workspack/src/pcl_subscriber/models/rpn_fp.engine";
-            this->pfeSerializedEnginePath = "/home/CenterPoint/catkin_points_workspack/src/pcl_subscriber/models/pfe_int8.engine";
-            this->rpnSerializedEnginePath = "/home/CenterPoint/catkin_points_workspack/src/pcl_subscriber/models/rpn_int8.engine";
+            this->pfeSerializedEnginePath = "/home/CenterPoint/catkin_points_workspack/src/pcl_subscriber/models/pfe_bunker.engine";
+            this->rpnSerializedEnginePath = "/home/CenterPoint/catkin_points_workspack/src/pcl_subscriber/models/rpn_bunker.engine";
             ROS_INFO("pfe Engine Path: %s", this->pfeSerializedEnginePath.c_str());
             ROS_INFO("rpn Engine Path: %s", this->rpnSerializedEnginePath.c_str());
         }
         else {
             ROS_INFO("PACKAGE_PATH: %s", PACKAGE_PATH.c_str());
-            this->pfeSerializedEnginePath = PACKAGE_PATH + "/models/pfe_fp.engine";
-            this->rpnSerializedEnginePath = PACKAGE_PATH + "/models/rpn_fp.engine";
+            this->pfeSerializedEnginePath = PACKAGE_PATH + "/models/pfe_bunker.engine";
+            this->rpnSerializedEnginePath = PACKAGE_PATH + "/models/rpn_bunker.engine";
         }
 
         this->load_engine = true;
@@ -133,8 +131,7 @@ class trtCenterPoint : public CenterPoint {
         float* points;
         cudaStream_t stream;
         
-
-
+        
         float* processInput(pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud) {
             size_t point_count = pcl_cloud->points.size();
 
@@ -143,19 +140,18 @@ class trtCenterPoint : public CenterPoint {
             // 创建一个动态数组存储点云数据
             float* point_cloud_data = new float[5 * point_count];
 
-            pcl::PointCloud<pcl::PointXYZI> pclCloud;
-            pcl::copyPointCloud(*pcl_cloud, pclCloud);
-
             for(size_t i = 0; i < point_count; ++i){
-                point_cloud_data[5 * i] = pclCloud.points[i].x;
-                point_cloud_data[5 * i + 1] = pclCloud.points[i].y;
-                point_cloud_data[5 * i + 2] = pclCloud.points[i].z;
-                // point_cloud_data[5 * i + 3] = pclCloud.points[i].intensity;
+                point_cloud_data[5 * i] = pcl_cloud->points[i].x;
+                point_cloud_data[5 * i + 1] = pcl_cloud->points[i].y;
+                point_cloud_data[5 * i + 2] = pcl_cloud->points[i].z;
+                // point_cloud_data[5 * i + 3] = pcl_cloud->points[i].intensity;
                 point_cloud_data[5 * i + 3] = 0.0;
                 point_cloud_data[5 * i + 4] = elongation_rate;
             }
+
             return point_cloud_data;
         }
+
 
 };
 

@@ -21,6 +21,10 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   sensor_msgs
+  tf2
+  tf2_ros
+  visualization_msgs
+  geometry_msgs
 )
 
 # pcl and boost related !
